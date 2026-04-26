@@ -1,0 +1,572 @@
+# Logo Juanca (Traducido)
+logoJuanca="
+  ▄██████▄       ▄▄▄                     ▄▄▄▄▄▄▄        
+ ██      ▀█▄     ███                    ███▀▀▀▀▀        
+██  ▄█▀▀▀██      ███ ██ ██  ▀▀█▄ ████▄ ███       ▀▀█▄  
+██  ██   ██ ▄▄▄  ███ ██ ██ ▄█▀██ ██ ██ ███      ▄█▀██  
+ ██▄ ▀▀▀▀▀▀  ▀████▀  ▀██▀█ ▀█▄██ ██ ██ ▀███████ ▀█▄██  
+  ▀▀██████▀▀                                           
+"
+
+# Función para mostrar el header
+show_dashboard() {
+    clear
+    # Color aleatorio (usando códigos ANSI)
+    colores=(31 32 33 34 35 36)
+    color=${colores[$RANDOM % ${#colores[@]}]}
+    echo -e "\e[${color}m$logoJuanca\e[0m"
+
+    echo -e "\e[35m  Git Ready \e[0m| \e[36m Go \e[0m| \e[33m JS \e[0m| \e[31m HTML \e[0m"
+    echo "---------------------------------------------------------"
+}
+
+# Alias tipo "p" o "n"
+alias v='nvim'
+alias p='cd /mnt/c/Users/Usuario/Documents/Desarrollo && ls'
+alias g='nvim /mnt/c/Users/Usuario/Documents/Desarrollo/DocMd/Github.md'
+
+# --- FUNCIÓN PARA CREAR PROYECTOS GO + FIBER + DOCKER ---
+new_repo() {
+    local nombre=$1
+    if [ -z "$nombre" ]; then
+        echo -e "\e[33m⚠️ Indica un nombre para el proyecto. Ej: new_repo mi-contabilidad\e[0m"
+        return
+    fi
+
+    # 1. Estructura de Carpetas
+    echo -e "\e[34m📂 Creando estructura para: $nombre...\e[0m"
+    mkdir -p "$nombre"/{ctrl,db,help,middleware,static,models,rutas,config,views,tests}
+    cd "$nombre"
+
+    # 2. Inicializar Go
+    go mod init "$nombre"
+    echo -e "\e[36m📦 Descargando dependencias (Fiber, GORM, Postgres)...\e[0m"
+    go get github.com/gofiber/fiber/v2
+    go get github.com/gofiber/template/handlebars/v3
+    go get gorm.io/gorm
+    go get gorm.io/driver/postgres
+
+    # 3. Archivos de Configuración (.gitignore, .env, Docker)
+    echo "tmp/" > .gitignore
+    echo "main" >> .gitignore
+    echo ".env" >> .gitignore
+    echo "postgres_data/" >> .gitignore
+
+    cat <<EOF > .env
+DB_HOST=db
+DB_PORT=5432
+DB_USER=admin
+DB_PASS=admin123
+DB_NAME=${nombre}_db
+EOF
+
+    # Dockerfile
+    cat <<EOF > Dockerfile
+FROM golang:alpine
+WORKDIR /app
+RUN apk add --no-cache gcc musl-dev
+RUN go install github.com/air-verse/air@latest
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+CMD ["air", "-c", ".air.toml"]
+EOF
+
+    # Docker-compose (con el healthcheck que usas)
+    cat <<EOF > docker-compose.yml
+services:
+  app:
+    build: .
+    container_name: ${nombre}_app
+    ports: ["3000:3000"]
+    volumes:
+      - .:/app
+    env_file: [.env]
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:15-alpine
+    container_name: ${nombre}_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: ${nombre}_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ${nombre}_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:
+EOF
+
+    # 4. Código Boilerplate (Main y DB)
+    cat <<EOF > main.go
+package main
+import (
+    "$nombre/db"
+    "$nombre/rutas"
+    "github.com/gofiber/fiber/v2"
+    "github.com/gofiber/template/handlebars/v3"
+)
+func main() {
+    db.Connect()
+    engine := handlebars.New("./views", ".hbs")
+    app := fiber.New(fiber.Config{Views: engine})
+    app.Static("/static", "./static")
+    rutas.Setup(app)
+    app.Listen(":3000")
+}
+EOF
+
+    mkdir -p db
+    cat <<EOF > db/db.go
+package db
+import (
+    "fmt"
+    "os"
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
+)
+var DB *gorm.DB
+func Connect() {
+    dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", 
+        os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
+    database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil { panic("Fallo conexión DB") }
+    DB = database
+}
+EOF
+
+    # 5. Git Inicial
+    git init && git add . && git commit -m "feat: initial commit from automation script"
+    
+    echo -e "\n\e[35m🚀 PROYECTO '$nombre' CREADO Y LISTO EN WSL\e[0m"
+}
+
+# Alias para llamar a la función con una sola letra como en tu Windows
+alias n='new_repo'
+
+show_dashboard
+
+# --- UTILIDADES DE LIMPIEZA (Invoke-CleanNvim) ---
+invoke_clean_nvim() {
+    clear
+    # En Linux simplemente llamamos a nvim
+    nvim "$@"
+    clear
+    echo -e "\n\e[32m  󰄬 Edición finalizada.\e[0m"
+    echo -ne "\e[36m  󱊄 Presiona ENTER para volver al menú...\e[0m"
+    read
+}
+
+# --- FUNCIONES DE GIT ---
+
+get_git_stash() {
+    # Comprobar si es repo git
+    git rev-parse --git-dir > /dev/null 2>&1 || return
+    
+    local stash=$(git stash list | fzf --reverse --prompt="Git stash > " \
+        --preview 'git stash show --color=always -p {1}')
+    
+    [ -z "$stash" ] && return
+    echo "$stash" | cut -d':' -f1
+}
+
+restore_git_stash() {
+    local ref=$(get_git_stash)
+    [ -n "$ref" ] && git stash pop "$ref"
+}
+
+remove_git_stash() {
+    local ref=$(get_git_stash)
+    [ -z "$ref" ] && return
+    
+    clear
+    echo -ne "\e[33m⚠️ ¿Eliminar $ref ? (y/N): \e[0m"
+    read confirm
+    if [ "$confirm" == "y" ]; then
+        git stash drop "$ref"
+    fi
+}
+
+get_git_log() {
+    git rev-parse --is-inside-work-tree > /dev/null 2>&1 || return
+    local log_format="%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s"
+    
+    while true; do
+        local selection=$(git log --graph --color=always --format="$log_format" --date=short | \
+            fzf --ansi --no-sort --reverse --height="100%" \
+                --preview "git show --color=always {2}" \
+                --header "ENTER: Detalle | ESC: Volver")
+        
+        [ -z "$selection" ] && break
+        
+        local hash=$(echo "$selection" | grep -oE '[a-f0-9]{7,40}' | head -n 1)
+        
+        if [ -n "$hash" ]; then
+            clear
+            git show --color=always "$hash" | less -R
+            clear
+        fi
+    done
+}
+
+switch_git_branch() {
+    local branch=$(git branch --color=always | fzf --ansi --reverse --prompt="Checkout a rama > ")
+    if [ -n "$branch" ]; then
+        # Limpia el '*' de la rama actual y hace checkout
+        git checkout $(echo "$branch" | sed 's/^[* ]*//')
+    fi
+}
+
+# --- NAVEGACIÓN DE PROYECTOS (Project Jumper) ---
+
+p_jump() {
+    local current=$(pwd)
+    # Ruta de tus proyectos en WSL
+    local base_path="/mnt/c/Users/Usuario/Documents/Desarrollo"
+    
+    while true; do
+        # Listar directorios excluyendo carpetas pesadas
+        local selected=$(find . -maxdepth 1 -type d ! -path '*/.*' ! -name "vendor" ! -name "node_modules" -printf "%f\n" | \
+            fzf --reverse --height 40% --prompt="󱊲 Saltar a > " --header "ENTER: Entrar | ESC: Salir")
+        
+        [ -z "$selected" ] && break
+        
+        cd "$selected"
+        
+        # Si detecta entorno de desarrollo, se queda ahí
+        if [ -f "go.mod" ] || [ -f "main.go" ] || [ -d ".git" ]; then
+            clear
+            echo -e "\e[36m🚀 Contexto actualizado: $(pwd)\e[0m"
+            ls
+            break
+        fi
+    done
+}
+
+# --- GIT BLAME CON NVIM ---
+
+get_git_blame() {
+    local file=$(git ls-files | fzf --prompt="Blame archivo > " --reverse)
+    [ -z "$file" ] && return
+
+    local selected=$(git blame --color=always "$file" | \
+        fzf --ansi --no-sort --reverse --prompt="Blame línea > " \
+            --preview "git show --color=always {1}")
+
+    if [ -n "$selected" ]; then
+        # Extraer número de línea (en bash el split es distinto)
+        local line=$(echo "$selected" | awk '{print $3}' | tr -d ')')
+        invoke_clean_nvim "+$line" "$file"
+    fi
+}
+
+# Función Genérica para buscar símbolos usando Regex
+# $1: Regex de búsqueda, $2: Prompt, $3: Extensiones (ej: "*.go")
+_get_symbols() {
+    local regex=$1
+    local prompt=$2
+    local ext=$3
+
+    # Buscamos archivos, filtramos por regex y formateamos: ruta:linea:contenido
+    local results=$(find . -maxdepth 4 -name "$ext" -not -path "*/vendor/*" -not -path "*/node_modules/*" \
+        | xargs grep -nE "$regex" 2>/dev/null)
+
+    if [ -z "$results" ]; then
+        echo -e "\e[33mNo se encontraron símbolos.\e[0m"
+        return
+    fi
+
+    local selected=$(echo "$results" | fzf --ansi --reverse --height 40% \
+        --prompt="$prompt > " \
+        --delimiter ":" --nth 3.. \
+        --preview 'bat --style=numbers --color=always --highlight-line {2} {1}')
+
+    if [ -n "$selected" ]; then
+        local file=$(echo "$selected" | cut -d':' -f1)
+        local line=$(echo "$selected" | cut -d':' -f2)
+        invoke_clean_nvim "+$line" "$file"
+    fi
+}
+
+# Alias específicos usando la función maestra
+gosym() { _get_symbols "^func|^type" "Go symbol" "*.go"; }
+pysym() { _get_symbols "^def|^class" "Python symbol" "*.py"; }
+jssym() { _get_symbols "^function|^class|^const|^let|^var" "JS symbol" "*.js"; }
+cssym() { _get_symbols "^[.#\$@]\w+" "CSS symbol" "*.css"; }
+hbssym() { _get_symbols "{{[#/>]?\s*\w+" "HBS symbol" "*.hbs"; }
+
+# --- BUSCADOR POR CTAGS (Universal) ---
+get_fzf_symbol() {
+    # Evitar ejecutar en carpetas raíz
+    if [ ${#PWD} -le 5 ]; then
+        echo -e "\e[31m🛑 ERROR: Carpeta muy sensible.\e[0m"
+        return
+    fi
+
+    # Generar tags si no existen o se pide update (-u)
+    if [ "$1" == "-u" ] || [ ! -f "tags" ]; then
+        echo -e "\e[36m⏳ Generando tags...\e[0m"
+        ctags -R --exclude="node_modules" --exclude="vendor" --exclude=".git" .
+    fi
+
+    [ ! -f "tags" ] && return
+
+    # Filtrar y buscar con FZF
+    local selected=$(grep -v '^!' tags | fzf --reverse --nth=1,4 \
+        --prompt="Símbolo (Tags) > " \
+        --preview 'bat --style=numbers --color=always --highlight-line {3} {2}')
+
+    if [ -n "$selected" ]; then
+        # Ctags format: nombre [tab] archivo [tab] /regex/ ;" [tab] line:N
+        local file=$(echo "$selected" | cut -f2)
+        local line=$(echo "$selected" | grep -oE 'line:[0-9]+' | cut -d':' -f2)
+        [ -z "$line" ] && line=1
+        invoke_clean_nvim "+$line" "$file"
+    fi
+}
+alias ssym='get_fzf_symbol'
+
+# --- ALIAS RÁPIDOS ---
+alias glog='get_git_log'
+alias gco='switch_git_branch'
+alias gstash='restore_git_stash'
+alias gs='p_jump'
+alias gb='get_git_blame'
+
+# --- ALIAS DE DOCKER ---
+alias dcup='docker-compose up --build -d'
+alias dcdn='docker-compose down'
+alias dclog='docker-compose logs -f'
+alias dcps='docker-compose ps -a'
+
+# Entrar al contenedor de la App (basado en el nombre de la carpeta)
+enter_app() {
+    local proyecto=$(basename "$PWD")
+    local container="${proyecto}_app"
+    if [ $(docker ps -q -f name=$container) ]; then
+        docker exec -it "$container" sh
+    else
+        echo -e "\e[31m❌ Contenedor $container no encontrado.\e[0m"
+    fi
+}
+
+# Entrar a la DB de Postgres
+enter_db() {
+    local proyecto=$(basename "$PWD")
+    local container="${proyecto}_db"
+    if [ $(docker ps -q -f name=$container) ]; then
+        echo -e "\e[36m🐘 Conectando a Postgres: $container...\e[0m"
+        docker exec -it "$container" psql -U admin -d "${proyecto}_db"
+    else
+        echo -e "\e[31m❌ DB no encontrada.\e[0m"
+    fi
+}
+alias edb='enter_db'
+alias eapp='enter_app'
+get_grep() {
+    local pattern=$1
+    if [ -z "$pattern" ]; then
+        echo -n "🔍 Texto a buscar: "
+        read pattern
+    fi
+    [ -z "$pattern" ] && return
+
+    # Usamos ripgrep (rg) que es instantáneo
+    local results=$(rg --line-number --column --no-heading --color=always --smart-case "$pattern" 2>/dev/null)
+
+    if [ -z "$results" ]; then
+        echo -e "\e[33mNo se encontraron coincidencias.\e[0m"
+        return
+    fi
+
+    local selected=$(echo "$results" | fzf --ansi --reverse --delimiter ":" \
+        --nth 4.. \
+        --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
+        --header "ENTER: Editar | ESC: Volver")
+
+    if [ -n "$selected" ]; then
+        local file=$(echo "$selected" | cut -d':' -f1)
+        local line=$(echo "$selected" | cut -d':' -f2)
+        invoke_clean_nvim "+$line" "$file"
+    fi
+}
+alias sgr='get_grep'
+
+# Configura tu ruta de proyectos (Ajusta 'Usuario')
+export RUTA_PROYECTOS="/mnt/c/Users/Usuario/Documents/Desarrollo"
+
+# Función de Preview (Lo que se ve a la derecha en fzf)
+_project_preview() {
+    local folder="$RUTA_PROYECTOS/$1"
+    echo -e "\e[36m── PROYECTO: ${1^^} ──\e[0m"
+    if [ -d "$folder" ]; then
+        ls -F --color=always "$folder" | head -n 10
+        if [ -f "$folder/go.mod" ]; then echo -e "\n\e[32m󰟓 Go Project detected\e[0m"; fi
+        if [ -f "$folder/docker-compose.yml" ]; then echo -e "\e[34m🐳 Docker Ready\e[0m"; fi
+    fi
+}
+export -f _project_preview
+
+# El selector principal
+proyecto() {
+    local selected=$(ls "$RUTA_PROYECTOS" | fzf --reverse \
+        --header " 📂 SELECCIONA PROYECTO " \
+        --preview "_project_preview {}" --preview-window "right:60%")
+
+    if [ -n "$selected" ]; then
+        cd "$RUTA_PROYECTOS/$selected"
+        clear
+        show_dashboard  # Llama a tu logo
+        echo -e "\e[32mContexto: $selected\e[0m\n"
+        ls
+    fi
+}
+
+docker_menu() {
+    if [ ! -f "docker-compose.yml" ]; then
+        echo -e "\e[31m❌ No hay docker-compose.yml aquí.\e[0m"
+        return
+    fi
+
+    options="🐳 Status (ps)\n🚀 Levantar (up)\n🛑 Detener (down)\n💻 Shell (entrar)\n📦 Logs\n« Volver"
+    
+    selected=$(echo -e "$options" | fzf --reverse --header " 🐳 DOCKER MENU " --height 15%)
+
+    case "$selected" in
+        *"Status"*) docker-compose ps -a; read -p "Presiona ENTER..." ;;
+        *"Levantar"*) docker-compose up --build -d ;;
+        *"Detener"*) docker-compose down ;;
+        *"Shell"*)
+            local container=$(docker ps --format "{{.Names}}" | fzf --reverse --header " Selecciona Contenedor ")
+            [ -n "$container" ] && docker exec -it "$container" sh
+            ;;
+        *"Logs"*) docker-compose logs -f ;;
+    esac
+}
+alias dmenu='docker_menu'
+
+git_menu() {
+    git rev-parse --is-inside-work-tree > /dev/null 2>&1 || { echo "No es un repo Git"; return; }
+
+    # Definimos las categorías
+    cat_options="🔍 Buscadores y Logs\n📦 Flujo (Commit/Stash)\n🛠️ Avanzado\n🌿 Status Rápido\n🚀 Pull / Push\n« Salir"
+    
+    cat_sel=$(echo -e "$cat_options" | fzf --reverse --header "  HERRAMIENTAS DE GIT " --height 20%)
+
+    case "$cat_sel" in
+        *"Buscadores"*)
+            sub="⚡ Buscar texto (grep)\n📜 Log (fzf)\n📝 Blame\n🏷️ Símbolos\n« Volver"
+            sub_sel=$(echo -e "$sub" | fzf --reverse --header " GIT > BUSCAR ")
+            case "$sub_sel" in
+                *"texto"*) get_grep ;;
+                *"Log"*) get_git_log ;;
+                *"Blame"*) get_git_blame ;;
+                *"Símbolos"*) gosym ;;
+            esac
+            ;;
+        *"Flujo"*)
+            sub="🔍 Status Detallado\n💾 Commit Todo\n Cambiar Rama\n📦 Stash: Pop\n« Volver"
+            sub_sel=$(echo -e "$sub" | fzf --reverse --header " GIT > FLUJO ")
+            case "$sub_sel" in
+                *"Status"*) git status; read -p "Enter..." ;;
+                *"Commit"*) read -p "Mensaje: " msg; git add .; git commit -m "$msg" ;;
+                *"Rama"*) switch_git_branch ;;
+                *"Stash"*) restore_git_stash ;;
+            esac
+            ;;
+            # (Dentro de tu función git_menu, en la sección de Avanzado)
+        *"Avanzado"*)
+            adv_options="🔨 Rebase Interactivo\n🍒 Cherry-pick\n🔍 Bisect: Iniciar\n🧹 Bisect: Reset\n📋 Blame (Autoría)\n« Volver"
+            adv_sel=$(echo -e "$adv_options" | fzf --reverse --header " GIT > AVANZADO " --height 15%)
+            
+            case "$adv_sel" in
+                *"Rebase"*) update_git_rebase ;;
+                *"Cherry"*) copy_git_cherry_pick ;;
+                *"Bisect: Iniciar"*) start_git_bisect ;;
+                *"Bisect: Reset"*) git bisect reset && echo "Bisect finalizado." ;;
+                *"Blame"*) get_git_blame ;;
+            esac
+            ;;
+        *"Status Rápido"*) git status -s; read -p "Enter..." ;;
+        *"Pull"*) git pull && git push ;;
+    esac
+}
+alias gmenu='git_menu'
+
+# --- REBASE INTERACTIVO ---
+update_git_rebase() {
+    git rev-parse --git-dir > /dev/null 2>&1 || return
+    
+    local commit=$(git log --oneline --decorate --color=always | \
+        fzf --ansi --reverse --prompt="Rebase desde (commit base) > " \
+            --preview 'git show --color=always {1}')
+
+    if [ -n "$commit" ]; then
+        local hash=$(echo "$commit" | awk '{print $1}')
+        # En Bash, simplemente ejecutamos git rebase -i. 
+        # Nvim se abrirá automáticamente si lo tienes como editor por defecto.
+        git rebase -i "${hash}^"
+    fi
+}
+
+# --- CHERRY-PICK ---
+copy_git_cherry_pick() {
+    git rev-parse --git-dir > /dev/null 2>&1 || return
+
+    local commit=$(git log --oneline --decorate --color=always | \
+        fzf --ansi --reverse --prompt="Cherry-pick (aplicar commit) > " \
+            --preview 'git show --color=always {1}')
+
+    if [ -n "$commit" ]; then
+        local hash=$(echo "$commit" | grep -oE '[a-f0-9]{7,40}' | head -n 1)
+        echo -e "\n\e[33m󰄬 Aplicando cherry-pick de $hash...\e[0m"
+        git cherry-pick "$hash"
+        sleep 1
+    fi
+}
+
+# --- BISECT (Depuración de Bugs) ---
+start_git_bisect() {
+    git rev-parse --git-dir > /dev/null 2>&1 || return
+
+    echo -e "\e[35m--- CONFIGURACIÓN DE BISECT ---\e[0m"
+    
+    # Seleccionar commit MALO
+    local bad=$(git log --oneline --color=always | fzf --ansi --reverse --prompt="1. Seleccione commit MALO (con bug) > ")
+    [ -z "$bad" ] && return
+    local bad_hash=$(echo "$bad" | awk '{print $1}')
+
+    # Seleccionar commit BUENO
+    local good=$(git log --oneline --color=always | fzf --ansi --reverse --prompt="2. Seleccione commit BUENO (limpio) > ")
+    [ -z "$good" ] && return
+    local good_hash=$(echo "$good" | awk '{print $1}')
+
+    git bisect start
+    git bisect bad "$bad_hash"
+    git bisect good "$good_hash"
+    
+    echo -e "\n\e[32m✅ Bisect iniciado en: $bad_hash...$good_hash\e[0m"
+    echo "Usa 'git bisect good' o 'git bisect bad' según tus pruebas."
+}
+
+# Abre tus alias rápido
+alias va='nvim ~/.bash_aliases'
+# Recarga los alias sin cerrar la terminal
+alias sa='source ~/.bash_aliases'
+# Atajos para Go
+alias grun='go run .'
+alias gtest='go test ./...'
+alias gbuild='go build -v'
+
+# Comportamiento de la terminal
+bind "set completion-ignore-case on"
+
+# Atajos y Rutas
+alias lg='lazygit'
+export PATH="$PATH:$(go env GOPATH)/bin"
