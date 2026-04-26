@@ -1,0 +1,11 @@
+{
+  "diagnostics": {
+    "globals": ["vim", "Snacks"]
+  },
+  "workspace": {
+    "checkThirdParty": false,
+    "library": [
+      "$VIMRUNTIME/lua"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+# No subir los plugins descargados (ocupa mucho espacio)
+/lazy/
+/undodir/
+/shada/
+.netrwhist
+*.log
+# No subir archivos temporales de swap o backup
+*.swp
+*.swo
