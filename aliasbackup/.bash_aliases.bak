@@ -22,8 +22,13 @@ show_dashboard() {
 
 # Alias tipo "p" o "n"
 alias v='nvim'
-alias p='cd /mnt/c/Users/Usuario/Documents/Desarrollo && ls'
+alias p='cd /mnt/c/Users/Usuario/Documents/Desarrollo && eza --icons --grid'
 alias g='nvim /mnt/c/Users/Usuario/Documents/Desarrollo/DocMd/Github.md'
+# Redefiniendo los comandos estándar
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -lh --icons --group-directories-first --git'
+alias la='eza -a --icons --group-directories-first'
+alias lt='eza --tree --level=2 --icons' # Ver carpetas como árbol
 
 # --- FUNCIÓN PARA CREAR PROYECTOS GO + FIBER + DOCKER ---
 new_repo() {

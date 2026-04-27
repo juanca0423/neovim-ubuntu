@@ -30,6 +30,7 @@ return {
 					end,
 				},
 				indent = { enable = true },
+				additional_vim_regex_highlighting = false,
 				-- Esto es clave para que no intente usar el tree-sitter-cli de Windows
 				sync_install = false,
 				auto_install = true,
