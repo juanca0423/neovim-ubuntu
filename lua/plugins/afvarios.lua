@@ -107,4 +107,6 @@ return {
 			},
 		},
 	},
+	-- En tu archivo de plugins
+	{ "tpope/vim-fugitive" },
 }

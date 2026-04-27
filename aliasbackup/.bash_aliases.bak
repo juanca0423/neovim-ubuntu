@@ -583,7 +583,18 @@ start_git_bisect() {
     echo "Usa 'git bisect good' o 'git bisect bad' según tus pruebas."
 }
 
-# Abre tus alias rápido
+# Alias para editar la configuracion de Neovim
+alias conf='nvim ~/.config/nvim/init.lua'
+
+# Alias para editar mi proyecto actual 
+alias jc='nvim /mnt/c/Users/Usuario/Desktop/pruevas/States/main.go'
+
+alias cdjc='cd /mnt/c/Users/Usuario/Desktop/pruevas/States'
+
+# Alias para editar los alias rápidamente con Neovim
+alias va='nvim ~/.bash_aliases'
+
+# Activar guardar el backup y el git add .
 alias sa='source ~/.bash_aliases && cd ~/.config/nvim && cp ~/.bash_aliases aliasbackup/.bash_aliases.bak && git add . && echo "✅ Alias actualizados y respaldados localmente" && git status' # Recarga los alias sin cerrar la terminal
 # Atajos para Go
 alias grun='go run .'
