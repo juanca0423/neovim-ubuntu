@@ -228,6 +228,29 @@ switch_git_branch() {
     fi
 }
 
+# Función para Git: Add, Commit y Push (opcional)
+gac() {
+    if [ -z "$1" ]; then
+        echo "❌ Error: Te falta el mensaje del commit."
+        echo "Uso: gac \"mi mensaje de cambio\""
+        return 1
+    fi
+
+    git add .
+    git commit -m "$1"
+    
+    echo "✅ Cambios guardados localmente."
+    
+    # Preguntar si quieres hacer push de una vez
+    read -p "¿Quieres hacer push ahora? (s/n): " respuesta
+    if [[ "$respuesta" =~ ^[Ss]$ ]]; then
+        git push
+        echo "🚀 ¡Todo arriba en la nube!"
+    else
+        echo "👍 Ok, commit guardado pero sin push."
+    fi
+}
+
 # --- NAVEGACIÓN DE PROYECTOS (Project Jumper) ---
 
 p_jump() {
@@ -345,10 +368,10 @@ alias gs='p_jump'
 alias gb='get_git_blame'
 
 # --- ALIAS DE DOCKER ---
-alias dcup='docker-compose up --build -d'
-alias dcdn='docker-compose down'
-alias dclog='docker-compose logs -f'
-alias dcps='docker-compose ps -a'
+alias d-up='docker-compose up --build -d'
+alias d-down='docker-compose down'
+alias d-log='docker-compose logs -f'
+alias d-ps='docker-compose ps -a'
 
 # Entrar al contenedor de la App (basado en el nombre de la carpeta)
 enter_app() {
