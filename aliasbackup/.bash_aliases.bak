@@ -561,9 +561,7 @@ start_git_bisect() {
 }
 
 # Abre tus alias rápido
-alias va='nvim ~/.bash_aliases'
-# Recarga los alias sin cerrar la terminal
-alias sa='source ~/.bash_aliases'
+alias sa='source ~/.bash_aliases && cd ~/.config/nvim && cp ~/.bash_aliases aliasbackup/.bash_aliases.bak && git add . && echo "✅ Alias actualizados y respaldados localmente" && git status' # Recarga los alias sin cerrar la terminal
 # Atajos para Go
 alias grun='go run .'
 alias gtest='go test ./...'
