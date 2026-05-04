@@ -1,5 +1,3 @@
----@diagnostic disable: undefined-global
-
 return {
 	"neovim/nvim-lspconfig",
 	event = { "BufReadPre", "BufNewFile" },
@@ -117,5 +115,6 @@ return {
 				prefix = "",
 			},
 		})
+		vim.lsp.handlers["$/progress"] = function() end
 	end,
 }

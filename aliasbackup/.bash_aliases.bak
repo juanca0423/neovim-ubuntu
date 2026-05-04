@@ -30,6 +30,8 @@ alias ll='eza -lh --icons --group-directories-first --git'
 alias la='eza -a --icons --group-directories-first'
 alias lt='eza --tree --level=2 --icons' # Ver carpetas como árbol
 
+alias ssh-eeffs='ssh -i ~/.ssh/google_cloud_key juanca0423@eeffs.com'
+
 # --- FUNCIÓN PARA CREAR PROYECTOS GO + FIBER + DOCKER ---
 new_repo() {
     local nombre=$1
